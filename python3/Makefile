@@ -1,8 +1,7 @@
-export PATH := $(PATH):$(CURDIR)/sbin
-export VIRTUALENV_INTERPRETER_RUNNING := 1
+export PATH := $(CURDIR)/venv/bin:$(CURDIR)/sbin:$(PATH)
 
 
-all: venv
+all: venv blacken
 
 sbin/venv-update:
 	curl -sSL https://raw.githubusercontent.com/Yelp/venv-update/master/venv_update.py > $@.tmp
@@ -10,4 +9,7 @@ sbin/venv-update:
 	mv $@.tmp $@
 
 venv: Makefile sbin/venv-update requirements.txt
-	venv-update venv= --python python3 venv --prompt='fm:'
+	venv-update venv= --python python3 --prompt='(venv:fm) ' venv
+
+blacken:
+	./venv/bin/black .

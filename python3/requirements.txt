@@ -1,0 +1,7 @@
+# runtime requirements:
+# (none, currently)
+
+# dev requirements:
+pylint
+flake8
+black

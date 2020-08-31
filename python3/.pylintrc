@@ -5,4 +5,5 @@ disable=
   no-else-return,  # I want the opposite of this check :(
   redefined-builtin,
   too-few-public-methods,
+  fixme,
 

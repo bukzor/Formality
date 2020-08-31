@@ -16,6 +16,10 @@ class Var(Term("Var", "indx")):
         del depth
         return self.indx.split("#")[0]
 
+    def reduce(self, defs, erased=False):
+        del defs, erased
+        return self
+
 
 class Ref(Term("Ref", "name")):
     __slots__ = ()
@@ -23,6 +27,20 @@ class Ref(Term("Ref", "name")):
     def stringify(self, depth=0):
         del depth
         return self.name
+
+    def reduce(self, defs, erased=False) -> Term:
+        if defs[self.name]:
+            term = defs[self.name].term
+            if (  # FIXME: pylint:disable=unidiomatic-typecheck
+                type(term) is Loc
+                and type(term.expr) is Ref
+                and term.expr.name == self.name
+            ):
+                return term
+            else:
+                return term.reduce(defs, erased)
+        else:
+            return Ref(self.name)
 
 
 class Typ(Term("Typ", "")):
@@ -32,6 +50,10 @@ class Typ(Term("Typ", "")):
     def stringify(depth=0):
         del depth
         return "*"
+
+    def reduce(self, defs, erased=False):
+        del defs, erased
+        return self
 
 
 class All(Term("All", "eras self name bind body")):
@@ -45,6 +67,14 @@ class All(Term("All", "eras self name bind body")):
         body = self.body(Var(slf_ + "#"), Var(name + "#")).stringify(depth + 2)
         return f"{bind}{slf_}({name}:{type}) {body}"
 
+    def reduce(self, defs, erased=False):
+        del defs, erased
+        return self
+
+
+def identity(obj):
+    return obj
+
 
 class Lam(Term("Lam", "eras name body")):
     __slots__ = ()
@@ -54,6 +84,12 @@ class Lam(Term("Lam", "eras name body")):
         name = self.name or ("x" + str(depth))
         body = self.body(Var(name + "#")).stringify(depth)
         return f"{bind}{name} {body}"
+
+    def reduce(self, defs, erased=False):
+        if erased and self.eras:
+            return self.body(Lam(False, "", identity)).reduce(defs, erased)
+        else:
+            return self
 
 
 class App(Term("App", "eras func argm")):
@@ -66,6 +102,16 @@ class App(Term("App", "eras func argm")):
         clos = ">" if self.eras else ")"
         return f"{open}{func} {argm}{clos}"
 
+    def reduce(self, defs, erased=False):
+        if erased and self.eras:
+            return self.func.reduce(defs, erased)
+        else:
+            func = self.func.reduce(defs, erased)
+            if type(func) is Lam:  # FIXME: pylint:disable=unidiomatic-typecheck
+                return func.body(self.argm).reduce(defs, erased)
+            else:
+                return self
+
 
 class Let(Term("Let", "name expr body")):
     __slots__ = ()
@@ -76,6 +122,10 @@ class Let(Term("Let", "name expr body")):
         body = self.body(Var(name + "#")).stringify(depth + 1)
         return f"${name}={expr};{body}"
 
+    def reduce(self, defs, erased=False):
+        term = self.body(self.expr)
+        return term.reduce(defs, erased)
+
 
 class Ann(Term("Ann", "done expr type")):
     __slots__ = ()
@@ -85,12 +135,18 @@ class Ann(Term("Ann", "done expr type")):
         expr = self.expr.stringify(depth)
         return f":{type} {expr}"
 
+    def reduce(self, defs, erased=False):
+        return self.expr.reduce(defs, erased)
+
 
 class Loc(Term("Loc", "frum upto expr")):
     __slots__ = ()
 
     def stringify(self, depth=0):
         return self.expr.stringify(depth)
+
+    def reduce(self, defs, erased=False):
+        return self.expr.reduce(defs, erased)
 
 
 del Term
@@ -137,7 +193,6 @@ __all__ = (
     "Ext",
     "Nil",
     "parse",
-    "reduce",
     "normalize",
     "Err",
     "typeinfer",

@@ -1,0 +1,5 @@
+
+[MESSAGES]
+disable=
+  missing-docstring,
+

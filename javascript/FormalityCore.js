@@ -43,7 +43,7 @@ function stringify(term, depth = 0) {
     case "Typ":
       return "*";
     case "All":
-      var bind = term.eras ? "∀" : "Π";
+      var bind = term.eras ? "Ɐ" : "Π";
       var self = term.self || ("x"+(depth+0));
       var name = term.name || ("x"+(depth+1));
       var type = stringify(term.bind, depth);
@@ -109,9 +109,9 @@ function parse(code, indx, mode = "defs") {
     switch (chr) {
       case "*":
         return ctx => Typ();
-      case "∀":
+      case "Ɐ":
       case "Π":
-        var eras = chr === "∀";
+        var eras = chr === "Ɐ";
         var self = parse_name();
         var skip = parse_char("(");
         var name = parse_name();
